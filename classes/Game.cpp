@@ -26,7 +26,6 @@ Game::~Game()
 		delete _player;
 	}
 	_players.clear();
-
 	_score = 0;
 	_table = nullptr;
 	_winner = nullptr;
@@ -40,7 +39,7 @@ void Game::setNumberOfPlayers(unsigned int n)
 	for (unsigned int i = 1; i <= n; i++)
 	{
 		Player *player = Player::initWithGame(this);
-//		player->setName( std::format( "Player-{}", i ) );
+	//	  player->setName( std::format( "Player-{}", i ) );
 		player->setName( "Player" );
 		player->setPlayerNumber(i-1);			// player numbers are zero-based
 		_players.push_back(player);
