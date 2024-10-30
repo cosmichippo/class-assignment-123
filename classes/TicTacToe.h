@@ -16,6 +16,12 @@ struct TicTacToeAI
     bool isBoardFull() const;
     int evaluateBoard();
     int evaluateBoardMinimax();
+    void populateGrid(int playerColor, int row, int col); // added, used to populate the board by one character
+    std::vector<TicTacToeAI*> generateChildren(TicTacToeAI* state, int playerColor);
+    TicTacToeAI* copy();// copies grid
+    void passStateString(std::string state);
+    void invertGrid(bool isMaxPlayer); 
+    // takes the negative of the grid -> used to ensure AI is always 'positive'
     int minimax(TicTacToeAI* state, int depth, bool isMaximizingPlayer);
     int negamax(TicTacToeAI* state, int depth, int playerColor);
     int ownerAt(int index ) const;

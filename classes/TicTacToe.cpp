@@ -1,4 +1,5 @@
 #include "TicTacToe.h"
+#include <algorithm>
 const int AI_PLAYER = 1;
 const int HUMAN_PLAYER = -1;
 
@@ -38,6 +39,7 @@ void TicTacToe::setUpBoard()
             _grid[i][j] = mySquare;
         }
     }
+    setAIPlayer(1);
     // this function initializes turns and sets the state variable
     startGame();
 }
@@ -255,6 +257,18 @@ void TicTacToe::setStateString(const std::string &s)
 //
 void TicTacToe::updateAI() 
 {
+    // here i have to set the AI to make a move. 
+    //this is where you call the ai??
+    // TicTacToeAI* head = clone();
+    // std::string myString = stateString();
+    // head->passStateString(myString);
+    int x = 0; int y = 0; int i = 0;
+    while(!actionForEmptyHolder(&_grid[y][x]) && i < 9){
+        i++;
+        x = i % 3; y = i / 3;
+    }
+    endTurn();
+                    
 }
 
 //
@@ -265,20 +279,55 @@ void TicTacToe::updateAI()
 TicTacToeAI* TicTacToe::clone() 
 {
     TicTacToeAI* newGame = new TicTacToeAI();
+
     return newGame;
 }
+
 
 //
 // helper function for the winner check
 //
 int TicTacToeAI::ownerAt(int index ) const
 {
+    int row = index % 3;
+    int col = index / 3;
+    return _grid[row][col];
+    // assuming grid is like [1,2,3] < where 1, 2, 3, are column positions, and [[], [], []] denote row
     return 0;
 }
 
 int TicTacToeAI::AICheckForWinner()
 {
-    return -1;
+    // check to see if either player has won
+    for (int i = 0; i < 3; i++){
+        int fRI = (3 * i) + 0;
+        int sRI = (3 * i) + 1;
+        int tRI = (3 * i) + 2;
+        // parse through for rows
+        if (ownerAt(fRI) == ownerAt(sRI) && ownerAt(sRI) == ownerAt(tRI) && ownerAt(fRI) != -1){
+            return ownerAt(fRI);
+        }
+        int fCI = 0 + i;
+        int sCI = 3 + i;
+        int tCI = 6 + i;
+        //parse through for columns
+        if (ownerAt(fCI) == ownerAt(sCI) && ownerAt(sCI) == ownerAt(tCI) && ownerAt(fCI) != -1){
+            return ownerAt(fCI);
+        }
+    }
+    // diag check
+    int f = 0; int s = 4; int t = 8;
+    if (ownerAt(f) == ownerAt(s) && ownerAt(s) == ownerAt(t) && ownerAt(f) != -1){
+            return ownerAt(f);
+    }
+    // inverse diag check
+    if (ownerAt(2) == ownerAt(4) && ownerAt(4) == ownerAt(6) && ownerAt(2) != -1){
+            return ownerAt(2);
+    }
+    // returns a 'draw' state if nobody has won
+    // should it do that? i think so.
+    return 0;
+    // return -1;
 }
 
 //
@@ -286,7 +335,15 @@ int TicTacToeAI::AICheckForWinner()
 //
 bool TicTacToeAI::isBoardFull() const
 {
-    return false;    
+    // parses through grid, checks for empty spaces
+    for (int i = 0; i < 3; i++){
+        for (int j = 0; j < 3; j++){
+            if (_grid[i][j] == 0){
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 //
@@ -294,6 +351,9 @@ bool TicTacToeAI::isBoardFull() const
 //
 int TicTacToeAI::evaluateBoard() 
 {
+    return this->AICheckForWinner();
+    // returns -1 if -1 player is winner, returns 1 if 1 value player is winner. ensure that
+    // ai player is set to positive value
     // Check for winner
     return 0;
 }
@@ -312,6 +372,7 @@ int TicTacToeAI::negamax(TicTacToeAI* state, int depth, int playerColor)
 //
 int TicTacToeAI::evaluateBoardMinimax()
 {
+    return evaluateBoard();
     return 0; // No winner yet or draw
 }
 
@@ -320,5 +381,64 @@ int TicTacToeAI::evaluateBoardMinimax()
 //
 int TicTacToeAI::minimax(TicTacToeAI* state, int depth, bool isMaximizingPlayer) 
 {
-    return 0;
+    // if leaf node or at depth: evaluate
+    if (depth == 0){
+        return state->evaluateBoardMinimax();
+    }
+    else{
+        int playerVal = -1;
+        if (isMaximizingPlayer) {playerVal *= -1;}
+        std::vector<TicTacToeAI*> children = generateChildren(state, playerVal);
+        std::vector<int> childValues;
+        for (auto child : children){
+            int val = minimax(child, depth-1, !isMaximizingPlayer); 
+            childValues.push_back(val);
+            // memory leak here i think cause there's no way to get to the generated like guys. 
+        }
+        if(isMaximizingPlayer){
+            return *std::max_element(childValues.begin(), childValues.end());
+        }
+        return *std::min_element(childValues.begin(), childValues.end());
+    }
+}
+
+void TicTacToeAI::populateGrid(int playerColor, int row, int col){
+    _grid[row][col] = playerColor; 
+}
+
+
+std::vector<TicTacToeAI*> TicTacToeAI::generateChildren(TicTacToeAI* state, int playerColor){
+    std::vector<TicTacToeAI*> children;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (state->_grid[i][j] == 0){
+                // generate a new empty guy
+                TicTacToeAI* child = state->copy();
+                // populate grid at this point.
+                child->populateGrid(playerColor, i, j);
+            }
+        }
+    }
+    return children;
+}
+
+
+TicTacToeAI* TicTacToeAI::copy() {
+    TicTacToeAI* state = new TicTacToeAI();
+    for (int i = 0; i < 3; i++){
+        for (int j=0; j< 3; j++){
+            state->_grid[i][j] = this->_grid[i][j];
+        }
+    }
+    return state;
+}
+void TicTacToeAI::passStateString(std::string state) {
+    for (int i = 0; i < 9; i++){ 
+        int val = 0;
+        if (state[i] == 1) {val = 1;}
+        if (state[i] == -1){val = -1;}
+        
+        int y = i / 3; int x = i % 3;
+        this->_grid[y][x] = val;
+    }
 }
