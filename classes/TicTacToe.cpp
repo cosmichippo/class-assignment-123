@@ -1,6 +1,5 @@
 #include "TicTacToe.h"
 #include <algorithm>
-#include "../Logger.cpp"
 #include <iostream>
 const int AI_PLAYER = 1;
 const int HUMAN_PLAYER = -1;
@@ -141,12 +140,6 @@ bool TicTacToe::canBitMoveFromTo(Bit* bit, BitHolder*src, BitHolder*dst)
 //
 void TicTacToe::stopGame()
 {
-  
-    Logger<std::string> myLogger = Logger<std::string>();
-    myLogger.setWritePath("text.txt");
-    myLogger.write(""); 
-
-
     for (int y=0; y<3; y++) {
         for (int x=0; x<3; x++) {
            _grid[y][x].destroyBit();
@@ -272,21 +265,18 @@ void TicTacToe::setStateString(const std::string &s)
 void TicTacToe::updateAI() {
     // here i have to set the AI to make a move. 
     //this is where you call the ai?? 
-    std::cout << "hi guys" << std::endl;
-    int x = 0; int y = 0; int i = 0;
-    TicTacToeAI* head = clone();    
-    std::string myString = stateString();//"122002001";
-    //stateString();
-    head->passStateString(myString); 
 
+    // setup for AI
+    TicTacToeAI* head = clone();    
+    std::string myString = stateString();
+    head->passStateString(myString); 
+    
+    // have it minimize against the player's turn
     pair<int, int> bestPair = head->minimax(head, 9, false);
+    // interpolate the index on the grid to coordinates, and set coordinates on gameboard
+    int x = 0; int y = 0; int i = 0;
     x = bestPair.second % 3; y = bestPair.second / 3;
     actionForEmptyHolder(&_grid[y][x]);
-    /* 
-    while (!actionForEmptyHolder(&_grid[y][x])){
-        x = i % 3; y = i / 3;
-        i++;
-    */
     endTurn();
 
 }
@@ -426,12 +416,18 @@ pair<int, int> TicTacToeAI::minimax(TicTacToeAI* state, int depth, bool isMaximi
         return minPair;
     }
 }
-
+/// @brief populates grid position according to what is set by playerColor
+/// @param playerColor 
+/// @param row 
+/// @param col 
 void TicTacToeAI::populateGrid(int playerColor, int row, int col){
     _grid[row][col] = playerColor; 
 }
 
-
+/// @brief generates list of children
+/// @param state the current gamestate
+/// @param playerColor the value to set on the gameboards of each child
+/// @return  vector of gameboards
 std::vector<TicTacToeAI*> TicTacToeAI::generateChildren(TicTacToeAI* state, int playerColor){
     std::vector<TicTacToeAI*> children;
     for (int i = 0; i < 9; i++) {
@@ -448,7 +444,8 @@ std::vector<TicTacToeAI*> TicTacToeAI::generateChildren(TicTacToeAI* state, int 
     return children;
 }
 
-
+/// @brief copies the gameboard
+/// @return returns a pointer ot the gameboard copy
 TicTacToeAI* TicTacToeAI::copy() {
     TicTacToeAI* state = new TicTacToeAI();
     for (int i = 0; i < 3; i++){
@@ -459,7 +456,8 @@ TicTacToeAI* TicTacToeAI::copy() {
     return state;
 
 }
-
+/// @brief fills in state of a gameboard as according to a state string
+/// @param state state string
 void TicTacToeAI::passStateString(std::string state) {
     for (int i = 0; i < 9; i++){ 
         int val = 0;

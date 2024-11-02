@@ -28,13 +28,11 @@ struct TicTacToeAI
     std::vector<TicTacToeAI*> generateChildren(TicTacToeAI* state, int playerColor);
     TicTacToeAI* copy();// copies grid
     void passStateString(std::string state);
-    void invertGrid(bool isMaxPlayer); 
     // takes the negative of the grid -> used to ensure AI is always 'positive'
     std::pair<int, int> minimax(TicTacToeAI* state, int depth, bool isMaximizingPlayer);
     int negamax(TicTacToeAI* state, int depth, int playerColor);
     int ownerAt(int index ) const;
     int AICheckForWinner();
-    void _union(TicTacToeAI* other);
 };
 
 //
