@@ -1,5 +1,7 @@
 #include "TicTacToe.h"
 #include <algorithm>
+#include "../Logger.cpp"
+#include <iostream>
 const int AI_PLAYER = 1;
 const int HUMAN_PLAYER = -1;
 
@@ -26,6 +28,8 @@ Bit* TicTacToe::PieceForPlayer(const int playerNumber)
 
 void TicTacToe::setUpBoard()
 {
+    // writes empty line to file 
+    
     // sets number of players
     setNumberOfPlayers(2);    
     // initialize the bitholders for the game
@@ -134,6 +138,11 @@ bool TicTacToe::canBitMoveFromTo(Bit* bit, BitHolder*src, BitHolder*dst)
 //
 void TicTacToe::stopGame()
 {
+  
+    Logger<std::string> myLogger = Logger<std::string>();
+    myLogger.setWritePath("text.txt");
+    myLogger.write(""); 
+
 
     for (int y=0; y<3; y++) {
         for (int x=0; x<3; x++) {
@@ -255,20 +264,28 @@ void TicTacToe::setStateString(const std::string &s)
 //
 // this is the function that will be called by the AI
 //
-void TicTacToe::updateAI() 
-{
+
+
+void TicTacToe::updateAI() {
     // here i have to set the AI to make a move. 
-    //this is where you call the ai??
-    // TicTacToeAI* head = clone();
-    // std::string myString = stateString();
-    // head->passStateString(myString);
+    //this is where you call the ai?? 
+    std::cout << "hi guys" << std::endl;
     int x = 0; int y = 0; int i = 0;
-    while(!actionForEmptyHolder(&_grid[y][x]) && i < 9){
-        i++;
-        x = i % 3; y = i / 3;
-    }
+    TicTacToeAI* head = clone();    
+    std::string myString = stateString();//"122002001";
+    //stateString();
+    head->passStateString(myString); 
+    std::vector<TicTacToeAI* > test = head->generateChildren(head, 1);
+
+    std::pair<int, int> myPair = head->minimax(head, test.size() - 1, true);
+    // returns value, index of next move
+
+    std::cout << myPair.first << "first"  << myPair.second << std::endl;
+    int index = myPair.second;
+    x = index % 3; y = index / 3;
+    actionForEmptyHolder(&_grid[y][x]);
     endTurn();
-                    
+
 }
 
 //
@@ -291,7 +308,7 @@ int TicTacToeAI::ownerAt(int index ) const
 {
     int row = index % 3;
     int col = index / 3;
-    return _grid[row][col];
+    return _grid[col][row];
     // assuming grid is like [1,2,3] < where 1, 2, 3, are column positions, and [[], [], []] denote row
     return 0;
 }
@@ -351,7 +368,7 @@ bool TicTacToeAI::isBoardFull() const
 //
 int TicTacToeAI::evaluateBoard() 
 {
-    return this->AICheckForWinner();
+    return AICheckForWinner();
     // returns -1 if -1 player is winner, returns 1 if 1 value player is winner. ensure that
     // ai player is set to positive value
     // Check for winner
@@ -372,33 +389,65 @@ int TicTacToeAI::negamax(TicTacToeAI* state, int depth, int playerColor)
 //
 int TicTacToeAI::evaluateBoardMinimax()
 {
-    return evaluateBoard();
+    int winner = AICheckForWinner();
+    if (winner == 1){
+        return -1;
+    }
+    if (winner == 2){
+        return 1;
+    }
     return 0; // No winner yet or draw
 }
 
 //
 // player is the current player's number (AI or human)
 //
-int TicTacToeAI::minimax(TicTacToeAI* state, int depth, bool isMaximizingPlayer) 
-{
+// returns int of value, index of grid
+std::pair <int, int> TicTacToeAI::minimax(TicTacToeAI* state, int depth, bool isMaximizingPlayer) {
     // if leaf node or at depth: evaluate
-    if (depth == 0){
-        return state->evaluateBoardMinimax();
-    }
-    else{
-        int playerVal = -1;
-        if (isMaximizingPlayer) {playerVal *= -1;}
-        std::vector<TicTacToeAI*> children = generateChildren(state, playerVal);
-        std::vector<int> childValues;
-        for (auto child : children){
-            int val = minimax(child, depth-1, !isMaximizingPlayer); 
-            childValues.push_back(val);
-            // memory leak here i think cause there's no way to get to the generated like guys. 
+    if (depth == 0 || state->AICheckForWinner() != 0){
+        int winner = state->evaluateBoardMinimax();
+        return std::make_pair(winner, 1); // ignored value
+    } else {
+        int playerVal = 1;
+        if (isMaximizingPlayer) {playerVal = 2;}
+        std::vector<TicTacToeAI*> children = generateChildren(state, playerVal); // size 9
+        // return vector of like zero if no move, -1 if move or 1 if move
+        // std::vector<std::pair<TicTacToeAI*, std::pair<int, int>>> childIndexPair;
+        //values[9] = fill() ~ if minimizing, fill with max value. if maximizing, fill with minimizing value
+
+        std::vector<int> values(9);
+        for (int i = 0; i < 9; i++){
+            values[i] = (isMaximizingPlayer) ? -9999 : 9999;
         }
-        if(isMaximizingPlayer){
-            return *std::max_element(childValues.begin(), childValues.end());
+
+        for (int i = 0; i < 9; i++) {
+            TicTacToeAI* child = children[i];
+            if (child != nullptr) { // new placement
+                std::pair<int, int> childValAndIgnoredValue = state->minimax(child, depth - 1, !isMaximizingPlayer);
+                int childVal = childValAndIgnoredValue.first;
+                values[i] = childVal;
+                std::cout << "Prop" << childVal;
+                std::cout << "depth" << depth << std::endl;
+            }
         }
-        return *std::min_element(childValues.begin(), childValues.end());
+        if (isMaximizingPlayer){
+            auto maxElement = std::max_element(values.begin(), values.end());
+            int loc_of_max = std::distance(values.begin(), maxElement); 
+            return std::make_pair(*maxElement, loc_of_max);
+        }
+        auto minElement = std::min_element(values.begin(), values.end());
+        int loc_of_min = std::distance(values.begin(), minElement); 
+        return std::make_pair(*minElement, loc_of_min);
+
+        /*
+        for child, index in children:
+            if child != nullptr;
+                childValue, ignore = minimax(child, depth, !isMax);
+                values[i] = value
+        if max:
+            return max_element, index;
+        return min_element, index;*/
     }
 }
 
@@ -408,16 +457,17 @@ void TicTacToeAI::populateGrid(int playerColor, int row, int col){
 
 
 std::vector<TicTacToeAI*> TicTacToeAI::generateChildren(TicTacToeAI* state, int playerColor){
-    std::vector<TicTacToeAI*> children;
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            if (state->_grid[i][j] == 0){
-                // generate a new empty guy
-                TicTacToeAI* child = state->copy();
-                // populate grid at this point.
-                child->populateGrid(playerColor, i, j);
-            }
-        }
+    std::vector<TicTacToeAI*> children(9);
+    for (int i = 0; i < 9; i++) {
+        int x = i % 3; int y = i / 3;
+        if (state->_grid[y][x] == 0){
+            // generate a new empty guy
+            TicTacToeAI* child = state->copy();
+            child->populateGrid(playerColor, y, x);
+            children[i] = child;
+        } else {
+        children[i] = nullptr;
+        } 
     }
     return children;
 }
@@ -431,14 +481,22 @@ TicTacToeAI* TicTacToeAI::copy() {
         }
     }
     return state;
+
 }
+
 void TicTacToeAI::passStateString(std::string state) {
     for (int i = 0; i < 9; i++){ 
         int val = 0;
-        if (state[i] == 1) {val = 1;}
-        if (state[i] == -1){val = -1;}
+        
+        if (state[i] == '1') {val = 1;}
+        if (state[i] == '2'){val = 2;}
         
         int y = i / 3; int x = i % 3;
         this->_grid[y][x] = val;
+    }
+}
+
+void _union(TicTacToeAI* guyWithGrid){
+    for (int i = 0; i < 9; i++){
     }
 }
