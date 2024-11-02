@@ -5,6 +5,9 @@
 const int AI_PLAYER = 1;
 const int HUMAN_PLAYER = -1;
 
+using namespace std;
+
+
 TicTacToe::TicTacToe()
 {
 }
@@ -275,15 +278,15 @@ void TicTacToe::updateAI() {
     std::string myString = stateString();//"122002001";
     //stateString();
     head->passStateString(myString); 
-    std::vector<TicTacToeAI* > test = head->generateChildren(head, 1);
 
-    std::pair<int, int> myPair = head->minimax(head, test.size() - 1, true);
-    // returns value, index of next move
-
-    std::cout << myPair.first << "first"  << myPair.second << std::endl;
-    int index = myPair.second;
-    x = index % 3; y = index / 3;
+    pair<int, int> bestPair = head->minimax(head, 9, false);
+    x = bestPair.second % 3; y = bestPair.second / 3;
     actionForEmptyHolder(&_grid[y][x]);
+    /* 
+    while (!actionForEmptyHolder(&_grid[y][x])){
+        x = i % 3; y = i / 3;
+        i++;
+    */
     endTurn();
 
 }
@@ -321,24 +324,24 @@ int TicTacToeAI::AICheckForWinner()
         int sRI = (3 * i) + 1;
         int tRI = (3 * i) + 2;
         // parse through for rows
-        if (ownerAt(fRI) == ownerAt(sRI) && ownerAt(sRI) == ownerAt(tRI) && ownerAt(fRI) != -1){
+        if (ownerAt(fRI) == ownerAt(sRI) && ownerAt(sRI) == ownerAt(tRI) && ownerAt(fRI) != 0){
             return ownerAt(fRI);
         }
         int fCI = 0 + i;
         int sCI = 3 + i;
         int tCI = 6 + i;
         //parse through for columns
-        if (ownerAt(fCI) == ownerAt(sCI) && ownerAt(sCI) == ownerAt(tCI) && ownerAt(fCI) != -1){
+        if (ownerAt(fCI) == ownerAt(sCI) && ownerAt(sCI) == ownerAt(tCI) && ownerAt(fCI) != 0){
             return ownerAt(fCI);
         }
     }
     // diag check
     int f = 0; int s = 4; int t = 8;
-    if (ownerAt(f) == ownerAt(s) && ownerAt(s) == ownerAt(t) && ownerAt(f) != -1){
+    if (ownerAt(f) == ownerAt(s) && ownerAt(s) == ownerAt(t) && ownerAt(f) != 0){
             return ownerAt(f);
     }
     // inverse diag check
-    if (ownerAt(2) == ownerAt(4) && ownerAt(4) == ownerAt(6) && ownerAt(2) != -1){
+    if (ownerAt(2) == ownerAt(4) && ownerAt(4) == ownerAt(6) && ownerAt(2) != 0){
             return ownerAt(2);
     }
     // returns a 'draw' state if nobody has won
@@ -391,10 +394,10 @@ int TicTacToeAI::evaluateBoardMinimax()
 {
     int winner = AICheckForWinner();
     if (winner == 1){
-        return -1;
+        return -10;
     }
     if (winner == 2){
-        return 1;
+        return 10;
     }
     return 0; // No winner yet or draw
 }
@@ -403,51 +406,24 @@ int TicTacToeAI::evaluateBoardMinimax()
 // player is the current player's number (AI or human)
 //
 // returns int of value, index of grid
-std::pair <int, int> TicTacToeAI::minimax(TicTacToeAI* state, int depth, bool isMaximizingPlayer) {
-    // if leaf node or at depth: evaluate
-    if (depth == 0 || state->AICheckForWinner() != 0){
-        int winner = state->evaluateBoardMinimax();
-        return std::make_pair(winner, 1); // ignored value
+pair<int, int> TicTacToeAI::minimax(TicTacToeAI* state, int depth, bool isMaximizingPlayer) {
+    if (state->isBoardFull() || state->evaluateBoardMinimax() != 0){
+        return make_pair(state->evaluateBoardMinimax(), state->lastPlacedPos);
+    }
+    if (isMaximizingPlayer){
+        pair<int, int> maxPair = make_pair(-9999, -1);
+        for (auto child : state->generateChildren(state, 1)){
+            auto eval = minimax(child, depth - 1, false);
+            maxPair = (maxPair.first < eval.first) ? eval : maxPair;
+        };
+        return maxPair;
     } else {
-        int playerVal = 1;
-        if (isMaximizingPlayer) {playerVal = 2;}
-        std::vector<TicTacToeAI*> children = generateChildren(state, playerVal); // size 9
-        // return vector of like zero if no move, -1 if move or 1 if move
-        // std::vector<std::pair<TicTacToeAI*, std::pair<int, int>>> childIndexPair;
-        //values[9] = fill() ~ if minimizing, fill with max value. if maximizing, fill with minimizing value
-
-        std::vector<int> values(9);
-        for (int i = 0; i < 9; i++){
-            values[i] = (isMaximizingPlayer) ? -9999 : 9999;
-        }
-
-        for (int i = 0; i < 9; i++) {
-            TicTacToeAI* child = children[i];
-            if (child != nullptr) { // new placement
-                std::pair<int, int> childValAndIgnoredValue = state->minimax(child, depth - 1, !isMaximizingPlayer);
-                int childVal = childValAndIgnoredValue.first;
-                values[i] = childVal;
-                std::cout << "Prop" << childVal;
-                std::cout << "depth" << depth << std::endl;
-            }
-        }
-        if (isMaximizingPlayer){
-            auto maxElement = std::max_element(values.begin(), values.end());
-            int loc_of_max = std::distance(values.begin(), maxElement); 
-            return std::make_pair(*maxElement, loc_of_max);
-        }
-        auto minElement = std::min_element(values.begin(), values.end());
-        int loc_of_min = std::distance(values.begin(), minElement); 
-        return std::make_pair(*minElement, loc_of_min);
-
-        /*
-        for child, index in children:
-            if child != nullptr;
-                childValue, ignore = minimax(child, depth, !isMax);
-                values[i] = value
-        if max:
-            return max_element, index;
-        return min_element, index;*/
+        pair<int, int> minPair = make_pair(9999, -1);
+        for (auto child : state->generateChildren(state, 2)){
+            auto eval = minimax(child, depth - 1, true);
+            minPair = (minPair.first > eval.first) ? eval : minPair;
+        };
+        return minPair;
     }
 }
 
@@ -457,16 +433,16 @@ void TicTacToeAI::populateGrid(int playerColor, int row, int col){
 
 
 std::vector<TicTacToeAI*> TicTacToeAI::generateChildren(TicTacToeAI* state, int playerColor){
-    std::vector<TicTacToeAI*> children(9);
+    std::vector<TicTacToeAI*> children;
     for (int i = 0; i < 9; i++) {
         int x = i % 3; int y = i / 3;
         if (state->_grid[y][x] == 0){
             // generate a new empty guy
             TicTacToeAI* child = state->copy();
             child->populateGrid(playerColor, y, x);
-            children[i] = child;
+            child->lastPlacedPos = i;
+            children.push_back(child);
         } else {
-        children[i] = nullptr;
         } 
     }
     return children;

@@ -10,8 +10,16 @@
 // this is the AI class
 // we use a small clone here so we can recursively call minimax
 //
+struct tttState{
+    int _grid[3][3];
+    int lastMovedPosition;
+    int playerNum;
+};
+
+
 struct TicTacToeAI
 {
+    int  lastPlacedPos;
     int   _grid[3][3];
     bool isBoardFull() const;
     int evaluateBoard();
